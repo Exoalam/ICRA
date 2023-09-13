@@ -145,4 +145,4 @@ cv2.rectangle(color_frame, (x, y), (x2, y2), (0, 255, 0), 2)
 cv2.imshow('Vision', color_frame)     
 cv2.waitKey(0)
 cv2.destroyAllWindows()
-
+#sa
