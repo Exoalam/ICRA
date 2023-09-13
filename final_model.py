@@ -6,7 +6,7 @@ import pyrealsense2 as rs
 from realsense_depth import *
 from scipy.spatial import distance
 from keras.applications import VGG19
-from keras.layers import Dense, Flatten
+from keras.layers import Dense, Flatten, Input,Concatenate
 from keras.models import Model,load_model
 from keras.preprocessing import image as keras_image
 from keras.applications.vgg19 import preprocess_input
