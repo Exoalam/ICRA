@@ -7,7 +7,7 @@ from realsense_depth import *
 from scipy.spatial import distance
 from keras.applications import VGG19
 from keras.layers import Dense, Flatten, Input,Concatenate
-from keras.models import Model,load_model
+from keras.models import Model,load_model, Sequential
 from keras.preprocessing import image as keras_image
 from keras.applications.vgg19 import preprocess_input
 
@@ -29,21 +29,18 @@ def orientation(image):
     model.load_weights('vgg19_1.h5')
     return model.predict(img_array)
 
-def hybride_reg(x1,x2,x3,x4):
-    input_linear = Input(shape=(1,), name="linear_input")
-    input_poly = Input(shape=(3,), name="poly_input")
-    linear_output = Dense(2, activation='linear', name="linear_output")(input_linear)
-    poly_hidden = Dense(64, activation='relu')(input_poly)
-    poly_hidden2 = Dense(32, activation='relu')(poly_hidden)
-    poly_output = Dense(2, activation='linear', name="poly_output")(poly_hidden2)
-    combined_output = Concatenate()([linear_output, poly_output])
-    final_output = Dense(2, activation='linear')(combined_output)
-    model = Model(inputs=[input_linear, input_poly], outputs=final_output)
-    model.compile(optimizer='adam', loss='mse')
-    model.load_weights('reg_new.h5')
+def hybride_reg(x1):
+    model = Sequential()
+    model.add(Dense(32, input_dim=1, kernel_initializer='normal', activation='relu'))  
+    model.add(Dense(16, activation='relu'))
+    model.add(Dense(2, activation='linear'))
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.load_weights('final_model.h5')
     xd1 = np.array([[x1]])
-    xd2 = np.array([[x2,x3,x4]])
-    return model.predict([xd1,xd2])
+    return model.predict([xd1])
+
+def Remapping(x1,x2):
+    return x2 - x1
 
 custom_dtype = np.dtype([
     ('hit', np.int8),       
@@ -129,9 +126,12 @@ coordinate = points[0]
 ret, depth_frame, color_frame, depth_info = dc.get_frame()
 x1 = float(coordinate[0])-500
 x2 = float(coordinate[1])-500
+# coor = Remapping([x1,x2,coordinate[2]],[10,10,0])
+# rotation = Remapping([ori[0][0],ori[0][1],ori[0][2]],[0,0,0])
 points = reverse(depth_info,x1,x2,coordinate[2])
 distance = np.sqrt(np.power(x1,2)+np.power(x2,2)+np.power(coordinate[2],2))
-hw = hybride_reg(distance,ori[0][0],ori[0][1],ori[0][2])
+hw = hybride_reg(distance/100)
+print(hw)
 cv2.circle(color_frame, (round(points[0]),round(points[1])), 4, (0, 0, 255))
 w = round(np.abs(hw[0][0]))
 h = round(np.abs(hw[0][1]))
