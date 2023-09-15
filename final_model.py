@@ -1,6 +1,7 @@
 from ultralytics import YOLO
 import cv2
 import numpy as np
+import math
 from ultralytics.utils.plotting import Annotator
 import pyrealsense2 as rs
 from realsense_depth import *
@@ -39,8 +40,9 @@ def hybride_reg(x1):
     xd1 = np.array([[x1]])
     return model.predict([xd1])
 
-def Remapping(x1,x2):
-    return x2 - x1
+def Remapping(x2,x1):
+    print([x2[0] - x1[0],x2[1] - x1[1],np.abs(x2[2] - x1[2])])
+    return [x2[0] - x1[0],x2[1] - x1[1],np.abs(x2[2] - x1[2])]
 
 custom_dtype = np.dtype([
     ('hit', np.int8),       
@@ -95,10 +97,12 @@ while True:
             y = box.xywh[0][1].detach().cpu().numpy()
             w = box.xywh[0][2].detach().cpu().numpy()
             h = box.xywh[0][3].detach().cpu().numpy()      
+            
             point = int(x), int(y)
             cropped = color_frame[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]]
             if c in detect_list:
                 #print(orientation(cropped))
+                print(point)
                 points = dc.Global_points(point[0],point[1])
                 dx = 500+points[0][0]*100
                 dy = 500+points[0][1]*100
@@ -126,17 +130,19 @@ coordinate = points[0]
 ret, depth_frame, color_frame, depth_info = dc.get_frame()
 x1 = float(coordinate[0])-500
 x2 = float(coordinate[1])-500
-# coor = Remapping([x1,x2,coordinate[2]],[10,10,0])
-# rotation = Remapping([ori[0][0],ori[0][1],ori[0][2]],[0,0,0])
-points = reverse(depth_info,x1,x2,coordinate[2])
-distance = np.sqrt(np.power(x1,2)+np.power(x2,2)+np.power(coordinate[2],2))
+print(x1,x2)
+coor = Remapping([x1,x2,coordinate[2]],[0,0,0])
+rotation = Remapping([ori[0][0],ori[0][1],ori[0][2]],[0,0,0])
+points = reverse(depth_info,coor[0],coor[1],coor[2])
+distance = np.sqrt(np.power(coor[0],2)+np.power(coor[1],2)+np.power(coor[2],2))
 hw = hybride_reg(distance/100)
-print(hw)
 cv2.circle(color_frame, (round(points[0]),round(points[1])), 4, (0, 0, 255))
 h = round(np.abs(hw[0][0]))
 w = h*.33
+
 x1 = round(points[0])
 y1 = round(points[1])
+print(x1,y1)
 x = int(x1 - w/2)
 y = int(y1 - h/2)
 x2 = int(x1 + w/2)
